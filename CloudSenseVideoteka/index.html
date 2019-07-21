@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>CloudSense Inkubator</title>
+
+    <link rel="stylesheet" href="./css/bootstrap.min.css" />
+
+    <style>
+        .form-row {
+            margin: 6px 0px;
+        }
+
+        #page-title {
+            text-align: center;
+            margin: 20px 0px;
+        }
+
+        #output-table {
+            margin-top: 20px;
+        }
+    </style>
+
+</head>
+
+
+<body onload="loadCookieMovies();" onbeforeunload="saveCookieMovies();">
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h1 id="page-title">CloudSense Videoteka</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <form id="input-form" class="needs-validation" novalidate>
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <input id="form-movie-title" name="movieTitle" type="text" class="form-control"
+                                        placeholder="Naziv Filma" required>
+                                    <div class="invalid-feedback">
+                                        Molim unesite naziv filma.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-row">
+                                <div class="input-group">
+
+                                    <input id="form-movie-price" name="moviePrice" type="number" class="form-control"
+                                        placeholder="Cijena Filma" required>
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">HRK</span>
+                                    </div>
+                                    <div class="invalid-feedback">
+                                        Molim unesite cijenu filma.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2">
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <button type="button" class="btn btn-primary" onclick="addNewMovie();"
+                                        style="width:100%;">Dodaj Film</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <table id="output-table" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Naziv filma</th>
+                            <th scope="col">Cijena</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movies-added">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8">
+
+            </div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="col-4">
+                        <span>Ukupno:</span>
+                    </div>
+                    <div class="col-8">
+                        <span id="sum-amount"></span>
+                    </div>
+
+                </div>
+                <div class="row" style="color:crimson;">
+                    <div class="col-4">
+                        <span>Popust:</span>
+                    </div>
+                    <div class="col-8">
+                        <span id="discount-amount"></span>
+                    </div>
+                </div>
+                <hr style="margin: 4px 0px;" />
+                <div class="row">
+                    <div class="col-4">
+                        <span>Za platiti:</span>
+                    </div>
+                    <div class="col-8">
+                        <span id="total-amount"></span>
+                    </div>
+                </div>
+				<div class="row mt-2" style="margin: auto">
+					<button class="btn btn-danger" onclick = "clearMovies();">Isprazni kosaricu</button>
+				</div>
+            </div>
+        </div>
+    </div>
+
+
+	<script src="./js/jquery-3.4.1.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/cookies.js"></script>
+    <script>
+		var num = 1; //broj dodanog filma (id za svaki dodani film)
+		var differentMovies = 0; //broj razlicitih filmova
+		
+		//update rednih brojeva redaka	
+		function updateIndices(){
+			$('#output-table .index').each(function(index, value){
+				$(this).html(index+1);
+			});
+		}
+        
+		//validacija forme
+		function isFormValid() {
+            let isValid = true;
+
+            let movieTitle = $('#form-movie-title');
+            let moviePrice = $('#form-movie-price');
+
+
+            if (movieTitle.val() == '') {
+                movieTitle.addClass('is-invalid');
+                isValid = false;
+            } else {
+                movieTitle.removeClass('is-invalid');
+            }
+
+            if (moviePrice.val() == '') {
+                moviePrice.addClass('is-invalid');
+                isValid = false;
+            } else {
+                moviePrice.removeClass('is-invalid');
+            }
+
+
+            return isValid;
+        }
+
+		
+		//zbroj cijena filmova
+		function sumPrices() {
+			let sum = 0.00;
+			
+			$('.list-movie-price').each(function(){
+				sum += parseInt($(this).text());
+			});
+	
+			return sum;
+		}
+		
+		//update cijena filmova i odgovarajuceg popusta
+		function updatePrices() {
+			let sum = sumPrices();
+			let discount = 0.00;
+			if (differentMovies >= 3) {
+				discount = -((sum*5)/100);
+			}
+			let total = sum + discount;
+
+			$('#sum-amount').text(sum.toFixed(2) + ' HRK');
+			$('#discount-amount').text(discount.toFixed(2) + ' HRK');
+			$('#total-amount').text(total.toFixed(2) + ' HRK');
+		}
+
+		//dodavanje retka u tablici s nazivom filma i cijenom
+		function appendMovie(movieTitle, moviePrice){
+			let movie = `<tr id="movie`+ num +`">
+                                <th scope="col" class="index"></th>
+                                <th scope="col" class="list-movie-title `+ movieTitle +`">`+ movieTitle +`</th>
+                                <th scope="col" class="list-movie-price">`+ moviePrice +`</th>
+								<th scope="col" class="list-del-btn"><button class="btn btn-outline-danger" onclick="deleteSingleMovie('movie`+ num +`', '`+ movieTitle +`');">Obrisi</button></th>
+                             </tr>`;
+            $('#movies-added').append(movie);
+			num++;
+			updatePrices();
+			updateIndices();
+		}
+
+		
+		//spremanje filmova u kosarici pomocu cookie-a
+        function saveCookieMovies(){
+            let movies = '';
+            let prices = '';
+
+            $('.list-movie-title').each(function(){
+                movies += $(this).text() + '_';
+            });
+            $('.list-movie-price').each(function(){
+                prices += $(this).text() + '_';
+            });
+            setCookie('movie-titles', movies);
+            setCookie('movie-prices', prices);
+            setCookie('different-movies', differentMovies);
+        }
+
+		//ucitavanje filmova u kosarici pomocu cookie-a
+        function loadCookieMovies(){
+            let movies = getCookie('movie-titles').split('_');
+            let prices = getCookie('movie-prices').split('_');
+            differentMovies = getCookie('different-movies');
+ 
+            for(let i = 0; i <= movies.length-2; i++){
+                let movieTitle = movies[i];
+                let moviePrice = prices[i];
+               	
+				appendMovie(movieTitle, moviePrice); 
+            }
+        }
+        
+		//brisanje cookie-a
+        function deleteCookieMovies(){
+            delCookie('movie-titles');
+            delCookie('movie-prices');
+            delCookie('different-movies'); 
+        }
+
+		
+		//brisanje cijele liste filmova
+		function clearMovies(){
+			differentMovies = 0;
+			$('#movies-added').empty();
+			deleteCookieMovies();
+			updatePrices();
+		}
+
+		//brisanje pojedinacnih filmova
+		function deleteSingleMovie(movieNum, movieTitle){
+			$('#'+ movieNum +'').remove();
+			if(!$('.'+ movieTitle +'').length){
+				differentMovies--;
+			}
+			updatePrices();
+			updateIndices();
+		}
+
+		//dodavanje novog filma
+		function addNewMovie() {
+			let movieTitle = $('#form-movie-title').val();
+			let moviePrice = $('#form-movie-price').val();
+			
+			if (isFormValid()){
+				if(!$('.'+movieTitle+'').length){
+					differentMovies++;
+				}
+				appendMovie(movieTitle, moviePrice);
+			}
+		}
+
+    </script>
+
+</body>
+
+</html>
